@@ -39,7 +39,9 @@ function startAppServer(callback) {
         },
         publicPath: '/js/',
         stats: {
-            colors: true
+            colors: true,
+            chunks: false,
+            stats: 'errors-only'
         }
     });
     // Serve static resources
