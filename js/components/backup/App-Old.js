@@ -65,6 +65,10 @@ _handle_OnChange = ( event ) => {
             <Table
                 multiSelectable={true}
                 selectable={true}
+                onCellClick={(...args)=>{console.log("Cell Click", args)}}
+                onRowSelection={(...args)=>{console.log("Row Click", args)}}
+                onRowHover={(...args)=>{console.log("Row Hover", args)}}
+                onCellHover={(...args)=>{console.log("Cell Hover", args)}}
                 >
               <TableHeader
                   displaySelectAll={true}
@@ -79,7 +83,9 @@ _handle_OnChange = ( event ) => {
                   {this.props.viewer.hobbies.edges.map((edge, i) =>
 
                     <TableRow key={i}>
-                        <TableRowColumn>{i}</TableRowColumn>
+                        <TableRowColumn><div onClick={e => {
+                            e.stopPropagation();
+                            console.log("Clicked")} }>{i}</div></TableRowColumn>
                         <TableRowColumn>{edge.node.title}</TableRowColumn>
                     </TableRow>
                   )}

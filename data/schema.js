@@ -32,11 +32,12 @@ import {
 import {
   // Import methods that your schema can use to interact with your database
   User,
-  Widget,
   getUser,
   getViewer,
-  getWidget,
-  getWidgets,
+  TableData,
+  getData,
+  getTableData,
+  setData,
 } from './database';
 
 /**
@@ -50,8 +51,8 @@ var {nodeInterface, nodeField} = nodeDefinitions(
     var {type, id} = fromGlobalId(globalId);
     if (type === 'User') {
       return getUser(id);
-    } else if (type === 'Widget') {
-      return getWidget(id);
+  } else if (type === 'TableData') {
+      return getData(id);
     } else {
       return null;
     }
@@ -59,10 +60,8 @@ var {nodeInterface, nodeField} = nodeDefinitions(
   (obj) => {
     if (obj instanceof User) {
       return userType;
-    } else if (obj instanceof Widget)  {
-      return widgetType;
-    } else if (obj instanceof Address)  {
-      return addressType;
+  } else if (obj instanceof TableData)  {
+      return tableDataType;
     } else {
       return null;
     }
@@ -70,78 +69,45 @@ var {nodeInterface, nodeField} = nodeDefinitions(
 );
 
 /**
- * Define your own types here
- */
-var faction = {
-    addresses: [{
-            address_1: '123 Blah Street',
-            address_2: '',
-            city: 'Toronto',
-            postal_code: 'M1X B1Z',
-        },{
-            address_1: '345 Blah Street',
-            address_2: '',
-            city: 'Houston',
-            postal_code: '233441',
-        }
-    ],
-    hobbies: [
-      { id:"1", title:"Cricket" },
-      { id:"2", title: "Reading" },
-      { id:"3", title: "Traveling" }
-    ]
-}
-
-/**
 *  Types
 */
 
-var widgetType = new GraphQLObjectType({
-  name: 'Widget',
-  description: 'A shiny widget',
+var tableDataType = new GraphQLObjectType({
+  name: 'TableData',
+  description: 'A table data',
   fields: () => ({
-    id: globalIdField('Widget'),
+    id: globalIdField('TableData'),
     name: {
       type: GraphQLString,
-      description: 'The name of the widget',
+      description: 'Name',
     },
-  }),
-  interfaces: [nodeInterface],
-});
-
-var addressType = new GraphQLObjectType({
-  name: 'Address',
-  description: 'A user address',
-  fields: () => ({
-    id: globalIdField('Widget'),
-    address_1: {
+    calories: {
       type: GraphQLString,
-      description: 'Street Address 1',
+      description: 'calories',
     },
-    address_2: {
+    fat: {
       type: GraphQLString,
-      description: 'Street Address 2',
+      description: 'fat',
     },
-    city: {
+    carbs: {
       type: GraphQLString,
-      description: 'City',
+      description: 'carbs',
     },
-    postal_code: {
+    protein: {
       type: GraphQLString,
-      description: 'Postal Code',
+      description: 'protein',
     },
-  }),
-  interfaces: [nodeInterface],
-});
-
-var hobbyType = new GraphQLObjectType({
-  name: 'Hobbies',
-  description: 'A user hobbies',
-  fields: () => ({
-    id: globalIdField('Widget'),
-    title: {
+    sodium: {
       type: GraphQLString,
-      description: 'Hobby Type',
+      description: 'sodium',
+    },
+    calcium: {
+      type: GraphQLString,
+      description: 'calcium',
+    },
+    iron: {
+      type: GraphQLString,
+      description: 'iron',
     },
   }),
   interfaces: [nodeInterface],
@@ -152,14 +118,8 @@ var hobbyType = new GraphQLObjectType({
  * Define your own connection types here
  */
 
-var {connectionType: addressConnection} =
-   connectionDefinitions({name: 'Address', nodeType: addressType});
-
-var {connectionType: widgetConnection} =
-  connectionDefinitions({name: 'Widget', nodeType: widgetType});
-
-var {connectionType: hobbyConnection} =
-  connectionDefinitions({name: 'Hobby', nodeType: hobbyType});
+var {connectionType: tableDataConnection} =
+  connectionDefinitions({name: 'TableData', nodeType: tableDataType});
 
 
 var userType = new GraphQLObjectType({
@@ -167,22 +127,13 @@ var userType = new GraphQLObjectType({
   description: 'A person who uses our app',
   fields: () => ({
     id: globalIdField('User'),
-    widgets: {
-      type: widgetConnection,
-      description: 'A person\'s collection of widgets',
+    tableData: {
+      type: tableDataConnection,
+      description: 'A collection of Table Data',
       args: connectionArgs,
-      resolve: (_, args) => connectionFromArray(getWidgets(), args),
+      resolve: (_, args) => connectionFromArray(getTableData(), args),
     },
-    addresses: {
-        type: addressConnection,
-        description: 'A person\'s addresses',
-        args: connectionArgs,
-        resolve: (_, args) => connectionFromArray(
-            faction.addresses.map((address) => address),
-            args
-        ),
-    },
-    hobbies: {
+    /*hobbies: {
         type: hobbyConnection,
         description: 'A person\'s hobbies',
         args: {
@@ -203,7 +154,7 @@ var userType = new GraphQLObjectType({
                   args
               )
             },
-      }
+      }*/
   }),
   interfaces: [nodeInterface],
 });
@@ -218,7 +169,7 @@ var queryType = new GraphQLObjectType({
   fields: () => ({
     node: nodeField,
     // Add your own root fields here
-    viewer: {
+    Viewer: {
       type: userType,
       resolve: () => getViewer(),
     },
@@ -247,78 +198,70 @@ var queryType = new GraphQLObjectType({
  *     faction: Faction
  *   }
  */
- function createAddress(values){
-     var addressId = faction.addresses.push(values)  - 1;
-     return { addressId };
- }
-
-const addressAddMutation = mutationWithClientMutationId({
-  name: 'InsertAddress',
-  inputFields: {
-    address_1: {
-      type: new GraphQLNonNull(GraphQLString)
-    },
-    address_2: {
-      type: new GraphQLNonNull(GraphQLString)
-    },
-    city: {
-      type: new GraphQLNonNull(GraphQLString)
-    },
-    postal_code: {
-      type: new GraphQLNonNull(GraphQLString)
-    },
-  },
-  outputFields: {
-    address: {
-      type: addressType,
-      resolve: payload => faction.addresses[payload.addressId],
-    }
-  },
-  mutateAndGetPayload: (args) => {
-    return createAddress(args);
-  }
-});
-
-function addHobby(values){
-    var hobbyId = faction.hobbies.push(values)  - 1;
-    return { hobbyId };
-}
-const hobbyAddMutation = mutationWithClientMutationId({
-  name: 'InsertHobby',
+const addDataMutation = mutationWithClientMutationId({
+  name: 'InsertData',
   inputFields: {
     id: {
         type: new GraphQLNonNull(GraphQLInt)
     },
-    title: {
-      type: new GraphQLNonNull(GraphQLString)
+    name: {
+      type: GraphQLString,
+      description: 'Name',
+    },
+    calories: {
+      type: GraphQLString,
+      description: 'calories',
+    },
+    fat: {
+      type: GraphQLString,
+      description: 'fat',
+    },
+    carbs: {
+      type: GraphQLString,
+      description: 'carbs',
+    },
+    protein: {
+      type: GraphQLString,
+      description: 'protein',
+    },
+    sodium: {
+      type: GraphQLString,
+      description: 'sodium',
+    },
+    calcium: {
+      type: GraphQLString,
+      description: 'calcium',
+    },
+    iron: {
+      type: GraphQLString,
+      description: 'iron',
     },
   },
   outputFields: {
-    hobby: {
-      type: hobbyType,
-      resolve: ({hobbyId}) => {
-        var hobby = faction.hobbies[payload.hobbyId];
+    DataEdge: {
+      type: tableDataType,
+      resolve: ({dataId}) => {
+        var data = getData(payload.dataId);
         return {
-          cursor: cursorForObjectInConnection(faction.hobbies, hobby),
-          node: hobby,
+          cursor: cursorForObjectInConnection(getTableData(), data),
+          node: data,
         };
       },
     },
-    viewer: {
+    Viewer: {
       type: userType,
       resolve: () => getUser('1') //VERY IMPORTANT OTHERWISE FRONTEND Component WILL NOT REFRESH
     }
   },
   mutateAndGetPayload: (args) => {
-    return addHobby(args);
+    return setData(args);
   }
 });
 
 var mutationType = new GraphQLObjectType({
   name: 'Mutation',
   fields: () => ({
-    insertAddress: addressAddMutation,
-    insertHobby: hobbyAddMutation,
+    insertData: addDataMutation,
   })
 });
 
