@@ -1,4 +1,5 @@
-import React, {PropTypes} from 'react';
+import React from 'react';
+import PropTypes from 'prop-types';
 import {TableRow} from 'material-ui/Table';
 
 function getStyles(props, context, state) {
@@ -121,20 +122,32 @@ class DataTablesTableRow extends TableRow {
     style: PropTypes.object,
   };
 
-  onCellDoubleClick = (event, columnIndex) => {
-    if (this.props.onCellDoubleClick) {
-      this.props.onCellDoubleClick(event, this.props.rowNumber, columnIndex);
-    }
-  };
+  clicked = false;
+
+  clickTimer = undefined;
+
   onCellClick = (event, columnIndex) => {
-    if (this.props.selectable && this.props.onCellClick) {
-      this.props.onCellClick(event, this.props.rowNumber, columnIndex);
+    event.persist();
+    if (this.clicked) {
+      this.clicked = false;
+      clearTimeout(this.clickTimer);
+      if (this.props.onCellDoubleClick) {
+        this.props.onCellDoubleClick(event, this.props.rowNumber, columnIndex);
+      }
+    } else {
+      this.clicked = true;
+      this.clickTimer = setTimeout(() => {
+        this.clicked = false;
+        if (this.props.selectable && this.props.onCellClick) {
+          this.props.onCellClick(event, this.props.rowNumber, columnIndex);
+        }
+        event.ctrlKey = true;
+        if ( ( this.props.selectable && columnIndex === 0) ) {
+           this.onRowClick(event);
+        }
+      }, 200);
     }
-    event.ctrlKey = true;
-    if ( ( this.props.selectable && columnIndex === 0) ) {
-        this.onRowClick(event);
-    }
-  };
+ }
 
   render() {
     const {
@@ -167,7 +180,6 @@ class DataTablesTableRow extends TableRow {
           hoverable: this.props.hoverable,
           key: `${this.props.rowNumber}-${columnNumber}`,
           onClick: this.onCellClick,
-          onDoubleClick: this.onCellDoubleClick,
           onHover: this.onCellHover,
           onHoverExit: this.onCellHoverExit,
           style: Object.assign({}, styles.cell, child.props.style),

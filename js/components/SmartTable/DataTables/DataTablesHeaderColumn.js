@@ -1,4 +1,5 @@
-import React, {PropTypes} from 'react';
+import React from 'react';
+import PropTypes from 'prop-types';
 import {TableHeaderColumn} from 'material-ui/Table';
 import Tooltip from 'material-ui/internal/Tooltip';
 import ArrowUpward from 'material-ui/svg-icons/navigation/arrow-upward';
@@ -141,6 +142,7 @@ class DataTablesHeaderColumn extends TableHeaderColumn {
       sortable,
       sorted,
       order,
+      alignRight, // eslint-disable-line no-unused-vars
       ...other, // eslint-disable-line comma-dangle
     } = this.props;
 

@@ -1,4 +1,5 @@
-import React, {Component, PropTypes} from 'react';
+import React, {Component} from 'react';
+import PropTypes from 'prop-types';
 import {Toolbar, ToolbarGroup, ToolbarTitle} from 'material-ui/Toolbar';
 import IconButton from 'material-ui/IconButton';
 import ClearIcon from 'material-ui/svg-icons/content/clear';
@@ -56,6 +57,7 @@ class DataTablesHeaderToolbar extends Component {
     handleFilterValueChange: PropTypes.func,
     onFilterValueChange: PropTypes.func,
     title: PropTypes.string,
+    titleStyle: PropTypes.object,
     toolbarIconRight: PropTypes.node,
   };
 
@@ -70,10 +72,19 @@ class DataTablesHeaderToolbar extends Component {
   constructor(props, context) {
     super(props, context);
     this.filterValueTimer = undefined;
+    this.filterInput = undefined;
     this.state = {
       mode: 'default',
       filterValue: '',
     };
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+      if (prevState.mode === 'default' && this.state.mode === 'filter') {
+        if (this.filterInput) {
+            this.filterInput.focus();
+        }
+      }
   }
 
   handleFilterClick = () => {
@@ -121,6 +132,7 @@ class DataTablesHeaderToolbar extends Component {
       filterHintText,
       toolbarIconRight,
       title, // eslint-disable-line no-unused-vars
+      titleStyle,
       ...other, // eslint-disable-line no-unused-vars, comma-dangle
     } = this.props;
 
@@ -134,7 +146,7 @@ class DataTablesHeaderToolbar extends Component {
     let contentNode;
 
     if (mode === 'default') {
-      contentNode = (<ToolbarTitle style={styles.toolbarTitle} text={title} />);
+      contentNode = (<ToolbarTitle style={Object.assign({}, styles.toolbarTitle, titleStyle)} text={title} />);
     } else if (mode === 'filter') {
       contentNode = (
         <div style={styles.searchToolbarGroup}>
@@ -148,6 +160,9 @@ class DataTablesHeaderToolbar extends Component {
               hintText={filterHintText}
               onChange={this.handleFilterValueChange}
               value={filterValue}
+              ref={(textField) => {
+                  this.filterInput = textField ? textField.input : null;
+                }}
             />
           </div>
           <div style={styles.headerToolbarDefaultIcons}>

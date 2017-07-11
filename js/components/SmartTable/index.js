@@ -128,11 +128,15 @@ export default class SmartTable extends Component {
   }
 
   _handleCellClick(rowIndex, columnIndex, row, column) {
-    this.props.handleCellClick(rowIndex, columnIndex, row, column);
+    if( this.props.handleCellClick ) {
+        this.props.handleCellClick(rowIndex, columnIndex, row, column);
+    }
   }
 
   _handleCellDoubleClick(rowIndex, columnIndex, row, column) {
-    this.props.handleCellDoubleClick(rowIndex, columnIndex, row, column);
+    if( this.props.handleCellDoubleClick ) {
+        this.props.handleCellDoubleClick(rowIndex, columnIndex, row, column);
+    }
   }
 
   _handleRowSelection(selectedRows) {

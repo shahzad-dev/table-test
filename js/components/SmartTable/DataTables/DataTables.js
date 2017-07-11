@@ -1,4 +1,5 @@
-import React, {Component, PropTypes} from 'react';
+import React, {Component} from 'react';
+import PropTypes from 'prop-types';
 import {TableHeader, TableRow} from 'material-ui/Table';
 import {Toolbar} from 'material-ui/Toolbar';
 import DropDownMenu from 'material-ui/DropDownMenu';
@@ -53,7 +54,18 @@ function getStyles(props, context) {
     rowSizeMenu: {
       color: tableHeaderColumn.textColor,
     },
+    rowSizeControlsWrapper: {
+        display: 'flex',
+    },
   };
+}
+
+function isRowSelected(index, selectedRows) {
+  if (Array.isArray(selectedRows)) {
+    return selectedRows.includes(index);
+  } else {
+    return undefined;
+  }
 }
 
 class DataTables extends Component {
@@ -67,8 +79,10 @@ class DataTables extends Component {
     enableSelectAll: PropTypes.bool,
     filterHintText: PropTypes.string,
     fixedFooter: PropTypes.bool,
+    footerToolbarStyle: PropTypes.object,
     fixedHeader: PropTypes.bool,
     height: PropTypes.string,
+    initialSort: PropTypes.object,
     multiSelectable: PropTypes.bool,
     onCellClick: PropTypes.func,
     onCellDoubleClick: PropTypes.func,
@@ -86,12 +100,23 @@ class DataTables extends Component {
     rowSizeLabel: PropTypes.string,
     rowSizeList: PropTypes.array,
     selectable: PropTypes.bool,
+    selectedRows: PropTypes.array,
     showCheckboxes: PropTypes.bool,
+    showFooterToolbar: PropTypes.bool,
     showHeaderToolbar: PropTypes.bool,
     showRowHover: PropTypes.bool,
+    showRowSizeControls: PropTypes.bool,
     stripedRows: PropTypes.bool,
     summaryLabelTemplate: PropTypes.func,
+    tableBodyStyle: PropTypes.object,
+    tableHeaderColumnStyle: PropTypes.object,
+    tableHeaderStyle: PropTypes.object,
+    tableRowColumnStyle: PropTypes.object,
+    tableRowStyle: PropTypes.object,
+    tableStyle: PropTypes.object,
+    tableWrapperStyle: PropTypes.object,
     title: PropTypes.string,
+    titleStyle: PropTypes.object,
     toolbarIconRight: PropTypes.node,
   };
 
@@ -108,6 +133,7 @@ class DataTables extends Component {
     summaryLabelTemplate: (start, end, count) => {
       return `${start} - ${end} of ${count}`;
     },
+    showRowSizeControls: true,
     filterHintText: 'Search',
     columns: [],
     data: [],
@@ -118,21 +144,24 @@ class DataTables extends Component {
     stripedRows: false,
     showRowHover: false,
     selectable: false,
+    selectedRows: undefined,
     multiSelectable: false,
     enableSelectAll: false,
     deselectOnClickaway: false,
     showCheckboxes: false,
     height: 'inherit',
     showHeaderToolbar: false,
+    showFooterToolbar: true,
+    initialSort: {
+        column: '',
+        order: 'asc',
+    },
   };
 
   constructor(props, context) {
     super(props, context);
     this.state = {
-      sort: {
-        column: '',
-        order: 'asc',
-      },
+      sort: props.initialSort,
     };
   }
 
@@ -173,8 +202,8 @@ class DataTables extends Component {
   }
 
   handleCellDoubleClick = (rowIndex, columnIndex, event) => {
-    const {onCellDoubleClick, selectable} = this.props;
-    if (onCellDoubleClick && !selectable) {
+    const {onCellDoubleClick} = this.props;
+    if (onCellDoubleClick) {
       const adjustedColumnIndex = this.props.showCheckboxes ? columnIndex : columnIndex - 1;
       onCellDoubleClick(
         rowIndex,
@@ -229,6 +258,12 @@ class DataTables extends Component {
       onRowSelection(selectedRows);
     }
   }
+
+  renderTableRowColumnData = (row, column) => {
+    if (column.render) return column.render(row[column.key], row);
+    return row[column.key];
+  }
+
   handleSetSelectedRows = (selectedRows) => {
       if (this.refs.tableBody && this.refs.tableBody.state.selectedRows ){
           this.refs.tableBody.setState( { selectedRows } );
@@ -237,9 +272,11 @@ class DataTables extends Component {
   render() {
     const {
       title,
+      titleStyle,
       filterHintText,
       fixedHeader,
       fixedFooter,
+      footerToolbarStyle,
       stripedRows,
       showRowHover,
       selectable,
@@ -249,17 +286,26 @@ class DataTables extends Component {
       showCheckboxes,
       height,
       showHeaderToolbar,
+      showFooterToolbar,
       pageLabel,
       totalPages,
       rowSize,
       rowSizeLabel,
       rowSizeList,
+      showRowSizeControls,
       summaryLabelTemplate,
       columns,
       data,
       page,
       toolbarIconRight,
       count,
+      tableStyle,
+      tableBodyStyle,
+      tableHeaderColumnStyle,
+      tableHeaderStyle,
+      tableRowColumnStyle,
+      tableRowStyle,
+      tableWrapperStyle,
       ...other, // eslint-disable-line no-unused-vars, comma-dangle
     } = this.props;
 
@@ -292,9 +338,88 @@ class DataTables extends Component {
         <DataTablesHeaderToolbar
           filterHintText={filterHintText}
           title={title}
+          titleStyle={titleStyle}
           onFilterValueChange={this.handleFilterValueChange}
           toolbarIconRight={toolbarIconRight}
         />
+      );
+    }
+
+    let rowSizeControls = null;
+    if (showRowSizeControls) {
+      rowSizeControls = (
+        <div style={styles.rowSizeControlsWrapper}>
+          <div style={styles.footerToolbarItem}>
+            <div>{rowSizeLabel}</div>
+          </div>
+          {
+            rowSizeList.length > 0 ?
+            (
+              <DropDownMenu
+                labelStyle={styles.rowSizeMenu}
+                value={rowSize}
+                onChange={this.handleRowSizeChange}
+              >
+                {rowSizeList.map((rowSize) => {
+                  return (
+                    <MenuItem
+                      key={rowSize}
+                      value={rowSize}
+                      primaryText={rowSize}
+                    />
+                  );
+                })}
+              </DropDownMenu>
+            ) :
+            null
+          }
+        </div>
+      );
+    }
+
+    let footerToolbar;
+    if (showFooterToolbar) {
+      footerToolbar = (
+          <Toolbar style={Object.assign({}, styles.footerToolbar, footerToolbarStyle)}>
+            <div style={styles.footerControlGroup}>
+              <div style={styles.footerToolbarItem}>
+                <div>{pageLabel}</div>
+              </div>
+              <DropDownMenu
+                  labelStyle={styles.rowSizeMenu}
+                  value={page}
+                  onChange={this.handlePageNoChange}
+                >
+                  {pageNoList.map((pageSize) => {
+                    return (
+                      <MenuItem
+                        key={pageSize}
+                        value={pageSize}
+                        primaryText={pageSize}
+                      />
+                    );
+                  })}
+              </DropDownMenu>
+              {rowSizeControls}
+              <div style={styles.footerToolbarItem}>
+                <div>{summaryLabelTemplate(start, end, totalCount)}</div>
+              </div>
+              <div style={Object.assign(styles.paginationButtons, styles.footerToolbarItem)}>
+                <FlatButton
+                  icon={<ChevronLeft />}
+                  style={styles.paginationButton}
+                  onClick={this.handlePreviousPageClick}
+                  disabled={previousButtonDisabled}
+                />
+                <FlatButton
+                  icon={<ChevronRight />}
+                  style={styles.paginationButton}
+                  onClick={this.handleNextPageClick}
+                  disabled={nextButtonDisabled}
+                />
+              </div>
+            </div>
+          </Toolbar>
       );
     }
 
@@ -310,28 +435,37 @@ class DataTables extends Component {
           onCellClick={this.handleCellClick}
           onCellDoubleClick={this.handleCellDoubleClick}
           onRowSelection={this.handleRowSelection}
+          style={tableStyle}
+          bodyStyle={tableBodyStyle}
+          wrapperStyle={tableWrapperStyle}
         >
           <TableHeader
             displaySelectAll={showCheckboxes}
             adjustForCheckbox={showCheckboxes}
             enableSelectAll={enableSelectAll}
+            style={Object.assign({}, styles.tableHeader, tableHeaderStyle)}
           >
-            <TableRow onCellClick={this.handleHeaderColumnClick}>
-              {columns.map((row, index) => {
-                const style = Object.assign({}, styles.tableHeaderColumn, row.style || {});
-                const sortable = row.sortable;
-                const sorted = this.state.sort.column === row.key;
+            <TableRow
+                onCellClick={this.handleHeaderColumnClick}
+                style={Object.assign({}, styles.tableRow, tableRowStyle)}
+                >
+              {columns.map((column, index) => {
+                const style = Object.assign({}, styles.tableHeaderColumn, tableHeaderColumnStyle, column.style || {});
+                const sortable = column.sortable;
+                const sorted = this.state.sort.column === column.key;
                 const order = sorted ? this.state.sort.order : 'asc';
                 return (
                   <DataTablesHeaderColumn
                     key={index}
                     style={style}
-                    tooltip={row.tooltip}
+                    tooltip={column.tooltip}
                     sortable={sortable}
                     sorted={sorted}
                     order={order}
+                    alignRight={column.alignRight}
+                    className={column.className}
                   >
-                    <span>{row.label}</span>
+                    <span>{column.label}</span>
                   </DataTablesHeaderColumn>
                 );
               }, this)}
@@ -346,14 +480,18 @@ class DataTables extends Component {
           >
             {data.map((row, index) => {
               return (
-                <DataTablesRow style={styles.tableRow} key={index} selected={row.selected}>
-                  {columns.map((mrow, index) => {
+                <DataTablesRow
+                    style={Object.assign({}, styles.tableRow, tableRowStyle)}
+                    key={index}
+                    selected={isRowSelected(index, this.props.selectedRows)}>
+                  {columns.map((column, index) => {
                     return (
                       <DataTablesRowColumn
-                        style={mrow.style}
+                        style={Object.assign({}, styles.tableRowColumn, tableRowColumnStyle, column.style)}
                         key={index}
+                        alignRight={column.alignRight}
                       >
-                        {row[mrow.key]}
+                        {this.renderTableRowColumnData(row, column)}
                       </DataTablesRowColumn>
                     );
                   })}
@@ -362,63 +500,7 @@ class DataTables extends Component {
             })}
           </DataTablesTableBody>
         </DataTablesTable>
-        <Toolbar style={styles.footerToolbar}>
-          <div style={styles.footerControlGroup}>
-            <div style={styles.footerToolbarItem}>
-              <div>{pageLabel}</div>
-            </div>
-            <DropDownMenu
-                labelStyle={styles.rowSizeMenu}
-                value={page}
-                onChange={this.handlePageNoChange}
-              >
-                {pageNoList.map((pageSize) => {
-                  return (
-                    <MenuItem
-                      key={pageSize}
-                      value={pageSize}
-                      primaryText={pageSize}
-                    />
-                  );
-                })}
-            </DropDownMenu>
-            <div style={styles.footerToolbarItem}>
-              <div>{rowSizeLabel}</div>
-            </div>
-            <DropDownMenu
-              labelStyle={styles.rowSizeMenu}
-              value={rowSize}
-              onChange={this.handleRowSizeChange}
-            >
-              {rowSizeList.map((rowSize) => {
-                return (
-                  <MenuItem
-                    key={rowSize}
-                    value={rowSize}
-                    primaryText={rowSize}
-                  />
-                );
-              })}
-            </DropDownMenu>
-            <div style={styles.footerToolbarItem}>
-              <div>{summaryLabelTemplate(start, end, totalCount)}</div>
-            </div>
-            <div style={Object.assign(styles.paginationButtons, styles.footerToolbarItem)}>
-              <FlatButton
-                icon={<ChevronLeft />}
-                style={styles.paginationButton}
-                onClick={this.handlePreviousPageClick}
-                disabled={previousButtonDisabled}
-              />
-              <FlatButton
-                icon={<ChevronRight />}
-                style={styles.paginationButton}
-                onClick={this.handleNextPageClick}
-                disabled={nextButtonDisabled}
-              />
-            </div>
-          </div>
-        </Toolbar>
+        {footerToolbar}
       </div>
     );
   }
